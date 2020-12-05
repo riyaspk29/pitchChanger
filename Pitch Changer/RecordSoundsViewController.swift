@@ -22,9 +22,8 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
     }
 
     @IBAction func startRecording(_ sender: Any) {
-        startRecordButton.isEnabled = false
-        stopRecordButton.isEnabled = true
-        recordLabel.text = "Recording in progress"
+        
+        configureUI(isRecording: true)
         
         let dirPath = NSSearchPathForDirectoriesInDomains(.documentDirectory,.userDomainMask, true)[0] as String
         let recordingName = "recordedVoice.wav"
@@ -32,24 +31,30 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
         let filePath = URL(string: pathArray.joined(separator: "/"))
 
         let session = AVAudioSession.sharedInstance()
-        try! session.setCategory(AVAudioSession.Category.playAndRecord, mode: AVAudioSession.Mode.default, options: AVAudioSession.CategoryOptions.defaultToSpeaker)
         
-        
-        try! audioRecorder = AVAudioRecorder(url: filePath!, settings:[:])
-        audioRecorder.delegate = self
-        audioRecorder.isMeteringEnabled = true
-        audioRecorder.prepareToRecord()
-        audioRecorder.record()
+        do {
+            try session.setCategory(AVAudioSession.Category.playAndRecord, mode: AVAudioSession.Mode.default, options: AVAudioSession.CategoryOptions.defaultToSpeaker)
+            audioRecorder = try AVAudioRecorder(url: filePath!, settings:[:])
+            audioRecorder.delegate = self
+            audioRecorder.isMeteringEnabled = true
+            audioRecorder.prepareToRecord()
+            audioRecorder.record()
+        } catch {
+            showErrorAlert()
+        }
     }
     
     @IBAction func stopRecording(_ sender: Any) {
-        startRecordButton.isEnabled = true
-        stopRecordButton.isEnabled = false
-        recordLabel.text = "Tap to record"
+        
+        configureUI(isRecording: false)
         
         audioRecorder.stop()
         let audioSession = AVAudioSession.sharedInstance()
-        try! audioSession.setActive(false)
+        do {
+            try audioSession.setActive(false)
+        } catch {
+            showErrorAlert()
+        }
     }
     
     func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
@@ -65,6 +70,18 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
         let playSoundVC = segue.destination as! PlaySoundsViewController
         let recordedAudioURL = sender as! URL
         playSoundVC.recordedAudioURL = recordedAudioURL
+    }
+    
+    func configureUI(isRecording: Bool) {
+        startRecordButton.isEnabled = !isRecording
+        stopRecordButton.isEnabled = isRecording
+        recordLabel.text = isRecording ? "Recording in progress" : "Tap to record"
+    }
+    
+    func showErrorAlert(){
+        let alert = UIAlertController(title: "Error", message: "There is an error.", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Dismiss", style: .default, handler: nil))
+        self.present(alert, animated: true)
     }
 }
 
